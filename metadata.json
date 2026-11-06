@@ -1,0 +1,6 @@
+{
+  "name": "FaceYou - Live Streaming",
+  "description": "Interactive TikTok-style live streaming platform with real-time video, dynamic gifts, coin balance, Paystack checkout, and viewer chat.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FaceYou - Live Streaming & Social Voice Messaging</title>
+  <meta name="description" content="FaceYou - Interactive live streaming, gifts, Paystack coin checkout, and voice notes messaging." />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Paystack Inline JS -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #000;
+      color: #fff;
+    }
+    @keyframes floatHeart {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-380px) scale(1.4) rotate(15deg); opacity: 0; }
+    }
+    .animate-float-heart {
+      animation: floatHeart 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-black text-white h-screen w-screen overflow-hidden flex flex-col justify-between">
+
+  <!-- ========================================== -->
+  <!-- 1. LOGIN / SIGN UP MODAL (AUTH GATEWAY)     -->
+  <!-- ========================================== -->
+  <div id="authOverlay" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl relative my-auto">
+      <!-- FaceYou Logo -->
+      <div class="flex flex-col items-center mb-4 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#ff0050] to-[#00f2fe] flex items-center justify-center shadow-lg shadow-rose-600/30 mb-2">
+          <i class="fa-solid fa-video text-white text-xl"></i>
+        </div>
+        <h1 class="text-2xl font-black tracking-tight text-white">Face<span class="text-[#ff0050]">You</span></h1>
+        <p class="text-xs text-neutral-400 mt-0.5">Create your account with your own picture to start</p>
+      </div>
+
+      <!-- Auth Toggle Tabs -->
+      <div class="flex bg-neutral-950 p-1 rounded-2xl mb-4 border border-neutral-800">
+        <button id="btnTabSignup" onclick="setAuthTab('signup')" class="flex-1 py-2 text-xs font-black rounded-xl bg-neutral-800 text-white transition-all">Sign Up</button>
+        <button id="btnTabLogin" onclick="setAuthTab('login')" class="flex-1 py-2 text-xs font-black rounded-xl text-neutral-400 hover:text-white transition-all">Log In</button>
+      </div>
+
+      <div id="authError" class="hidden mb-3 p-2.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold text-center"></div>
+
+      <!-- Sign Up Form (Upload Own Photo from device) -->
+      <form id="signupForm" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-3">
+        <!-- USER PHOTO UPLOAD (NO PRESET MOCK AVATARS) -->
+        <div class="flex flex-col items-center mb-2">
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1.5 text-center">Your Profile Photo</label>
+          <div class="relative group cursor-pointer" onclick="document.getElementById('userPhotoFile').click()">
+            <div class="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-[#ff0050] to-[#00f2fe] shadow-lg hover:scale-105 transition-transform">
+              <div class="w-full h-full rounded-full bg-neutral-950 overflow-hidden border-2 border-black flex items-center justify-center">
+                <img id="photoPreviewImg" src="" class="w-full h-full object-cover hidden" />
+                <div id="photoPlaceholder" class="flex flex-col items-center justify-center text-neutral-400">
+                  <i class="fa-solid fa-camera text-[#ff0050] text-lg mb-0.5"></i>
+                  <span class="text-[8px] font-black uppercase tracking-wider">Upload</span>
+                </div>
+              </div>
+            </div>
+            <div class="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#ff0050] text-white text-xs border border-black shadow">
+              <i class="fa-solid fa-upload"></i>
+            </div>
+          </div>
+          <input type="file" id="userPhotoFile" accept="image/*" onchange="previewUserPhoto(event)" class="hidden" />
+          <span id="photoStatusText" class="text-[10px] text-neutral-400 mt-1">Tap circle to select photo from device</span>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Display Name *</label>
+          <input type="text" id="regName" required placeholder="e.g. Maya Star" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Handle</label>
+          <input type="text" id="regHandle" placeholder="@maya_live" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Email Address *</label>
+          <input type="email" id="regEmail" required placeholder="you@example.com" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Password *</label>
+          <input type="password" id="regPassword" required placeholder="••••••••" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] flex items-center gap-1.5 font-medium">
+          <i class="fa-solid fa-sparkles text-amber-400"></i>
+          <span>Includes 100 starter FaceYou Coins to gift on LIVE!</span>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-full bg-[#ff0050] hover:bg-[#e00047] text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-600/30 transition-transform active:scale-95">Register & Start</button>
+      </form>
+
+      <!-- Log In Form -->
+      <form id="loginForm" onsubmit="handleAuthSubmit(event, 'login')" class="space-y-3 hidden">
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Email or Username</label>
+          <input type="text" id="logEmail" required placeholder="you@example.com" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Password</label>
+          <input type="password" id="logPassword" required placeholder="••••••••" class="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+        </div>
+        <button type="submit" class="w-full py-3 rounded-full bg-[#ff0050] hover:bg-[#e00047] text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-600/30 transition-transform active:scale-95">Log In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. MAIN APP CONTENT CONTAINER              -->
+  <!-- ========================================== -->
+  <main class="flex-1 relative w-full h-full overflow-hidden">
+    
+    <!-- PAGE A: LIVE BROADCAST SCREEN -->
+    <section id="pageLive" class="w-full h-full relative flex flex-col justify-between overflow-hidden cursor-pointer" onclick="handleScreenTap(event)">
+      <!-- Real Webcam Video -->
+      <video id="liveWebcam" autoplay muted playsinline class="absolute inset-0 w-full h-full object-cover -scale-x-100 hidden z-0"></video>
+      
+      <!-- Virtual Stage when Webcam is Off -->
+      <div id="virtualStage" class="absolute inset-0 z-0 bg-gradient-to-b from-neutral-900 via-rose-950/40 to-black flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-[#ff0050] to-[#00f2fe] mb-3 shadow-2xl animate-pulse">
+          <img id="stageAvatar" src="" class="w-full h-full rounded-full object-cover border-2 border-black" />
+        </div>
+        <h2 id="stageHostName" class="text-xl font-black text-white">FaceYou Creator</h2>
+        <p class="text-xs text-neutral-400 mt-1 max-w-xs">Tap screen to shower hearts, send Roses, or switch on your webcam</p>
+        <button onclick="toggleWebcam(event)" class="mt-4 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all">
+          <i class="fa-solid fa-camera text-[#ff0050] mr-1.5"></i> Enable Webcam
+        </button>
+      </div>
+
+      <!-- Live Top Bar with PROMINENT END LIVE BUTTON -->
+      <div class="relative z-30 flex items-center justify-between px-3 pt-3 pb-2 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+        <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 pointer-events-auto">
+          <img id="liveHostAvatar" src="" class="w-7 h-7 rounded-full object-cover border border-[#ff0050]" />
+          <div class="flex flex-col text-left">
+            <span id="liveHostName" class="text-xs font-black text-white">FaceYou LIVE</span>
+            <div class="flex items-center gap-1 text-[10px] text-neutral-400">
+              <span class="text-[#ff0050] font-black flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#ff0050] animate-ping"></span> LIVE
+              </span>
+              <span id="liveDuration">• 00:00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pointer-events-auto">
+          <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold text-white">
+            <i class="fa-solid fa-users text-neutral-300"></i>
+            <span id="liveViewers">1,240</span>
+          </div>
+
+          <!-- TOP PROMINENT BUTTON TO TURN OFF LIVE STREAM -->
+          <button id="btnTopEndLive" onclick="toggleBroadcast(event)" class="hidden px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider items-center gap-1.5 shadow-lg shadow-red-600/50 border border-red-400 animate-pulse">
+            <i class="fa-solid fa-square"></i> <span>End Live</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Floating Hearts Layer -->
+      <div id="heartsContainer" class="absolute inset-0 pointer-events-none z-20 overflow-hidden"></div>
+
+      <!-- Right Action Sidebar with Camera Toggle & Stop Buttons -->
+      <div class="absolute right-3 bottom-24 z-20 flex flex-col items-center gap-3">
+        <div class="flex flex-col items-center">
+          <div class="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-[#ff0050] shadow-lg">
+            <i class="fa-solid fa-heart text-lg"></i>
+          </div>
+          <span id="liveLikeCount" class="text-[10px] font-extrabold text-white mt-0.5 drop-shadow">4.2k</span>
+        </div>
+        <button onclick="toggleWebcam(event)" class="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:scale-110 transition-transform" title="Turn On/Off Camera">
+          <i class="fa-solid fa-camera"></i>
+        </button>
+      </div>
+
+      <!-- Floating Live Chat -->
+      <div class="relative z-20 flex flex-col justify-end px-3 pb-2 w-full max-w-sm pointer-events-none">
+        <div id="chatMessages" class="h-44 overflow-y-auto space-y-1.5 scrollbar-none pr-2 flex flex-col justify-end">
+          <div class="bg-black/50 backdrop-blur-md border border-amber-500/30 text-amber-300 text-[11px] font-bold px-2.5 py-1 rounded-xl w-fit">
+            ✨ FaceYou Studio connected. Tap screen to shower hearts!
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Chat & Gifts Bar with Big Go Live / Stop Stream button -->
+      <div class="relative z-30 px-3 pb-3 pt-2 bg-gradient-to-t from-black via-black/80 to-transparent flex items-center gap-2">
+        <form onsubmit="handleSendLiveChat(event)" class="flex-1">
+          <input type="text" id="liveChatInput" placeholder="Add comment..." class="w-full bg-neutral-900/90 border border-white/15 rounded-full px-4 py-2 text-xs text-white placeholder-neutral-400 focus:outline-none focus:border-[#ff0050]" />
+        </form>
+        <button onclick="sendRoseGift(event)" class="w-10 h-10 rounded-full bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/50 flex items-center justify-center text-xl transition-transform active:scale-90" title="Send 1 Rose">
+          🌹
+        </button>
+        <button onclick="openGiftModal(event)" class="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ff0050] to-[#00f2fe] p-0.5 shadow-lg shadow-rose-600/30 active:scale-95" title="FaceYou Gifts">
+          <div class="w-full h-full rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center text-amber-400">
+            <i class="fa-solid fa-gift text-sm animate-pulse"></i>
+          </div>
+        </button>
+        <button onclick="toggleBroadcast(event)" id="btnBroadcast" class="px-4 py-2 rounded-full bg-[#ff0050] hover:bg-[#e00047] text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xl">
+          <i class="fa-solid fa-tower-broadcast text-xs"></i> <span>Go Live</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PAGE B: DIRECT MESSAGING & VOICE NOTES -->
+    <section id="pageMessages" class="w-full h-full hidden flex flex-col bg-neutral-950 pb-16">
+      <div class="h-14 px-4 border-b border-white/10 flex items-center justify-between bg-neutral-900/60 backdrop-blur-md">
+        <div class="flex items-center gap-2.5">
+          <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" class="w-8 h-8 rounded-full object-cover border border-[#ff0050]" />
+          <div>
+            <h3 class="text-xs font-black text-white">FaceYou Creator Hub</h3>
+            <span class="text-[10px] text-emerald-400 font-semibold">• Online</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="dmStream" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div class="bg-neutral-800 border border-white/5 rounded-2xl p-3 max-w-[75%] rounded-tl-none">
+          <p class="text-xs text-neutral-200">Welcome to your FaceYou direct messages! Tap the microphone button to send real voice notes or type text chats.</p>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-white/10 bg-neutral-900/80 backdrop-blur-md">
+        <div id="recordingBar" class="hidden items-center justify-between bg-neutral-900 border border-rose-500/40 rounded-full px-4 py-2 text-rose-400">
+          <span class="text-xs font-mono font-bold flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+            Recording Voice Note... <span id="recordTimer">0:00</span>
+          </span>
+          <button onclick="stopVoiceNote()" class="px-3 py-1 rounded-full bg-[#ff0050] text-white text-xs font-bold">Send</button>
+        </div>
+
+        <form id="textBar" onsubmit="handleSendDM(event)" class="flex items-center gap-2">
+          <input type="text" id="dmInput" placeholder="Type message or record voice note..." class="flex-1 bg-neutral-950 border border-neutral-800 rounded-full px-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff0050]" />
+          <button type="button" onclick="startVoiceNote()" class="w-10 h-10 rounded-full bg-neutral-800 text-cyan-400 border border-white/10 flex items-center justify-center hover:scale-105" title="Record Voice Note">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+          <button type="submit" class="w-10 h-10 rounded-full bg-[#ff0050] hover:bg-[#e00047] text-white flex items-center justify-center shadow-md shadow-rose-600/30">
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PAGE C: PROFILE & COIN WALLET -->
+    <section id="pageProfile" class="w-full h-full hidden flex flex-col bg-black overflow-y-auto pb-20">
+      <div class="h-14 px-4 flex items-center justify-between border-b border-white/5 sticky top-0 bg-black/90 backdrop-blur-md z-30">
+        <div class="w-8"></div>
+        <h2 id="profTopName" class="text-sm font-black text-white">My Profile</h2>
+        <button onclick="handleLogout()" class="text-neutral-400 hover:text-white text-xs font-bold"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+
+      <div class="flex flex-col items-center pt-6 px-4 text-center">
+        <div class="relative group cursor-pointer mb-3" onclick="document.getElementById('changePhotoInput').click()">
+          <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-[#ff0050] to-[#00f2fe] shadow-2xl hover:scale-105 transition-transform">
+            <img id="profAvatar" src="" class="w-full h-full rounded-full object-cover border-2 border-black" />
+          </div>
+          <div class="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#ff0050] text-white text-xs border-2 border-black shadow">
+            <i class="fa-solid fa-pen"></i>
+          </div>
+        </div>
+        <input type="file" id="changePhotoInput" accept="image/*" onchange="changeProfilePhoto(event)" class="hidden" />
+
+        <h3 id="profName" class="text-lg font-black text-white">FaceYou User</h3>
+        <span id="profHandle" class="text-xs font-bold text-neutral-400 mb-4">@user</span>
+
+        <!-- Wallet Card -->
+        <div class="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-xl">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-400 text-amber-950 font-black flex items-center justify-center">
+              <i class="fa-solid fa-coins text-lg"></i>
+            </div>
+            <div class="flex flex-col text-left">
+              <span id="walletCoins" class="text-sm font-black text-white">100 FaceYou Coins</span>
+              <span class="text-[10px] text-neutral-400">💎 0 Diamonds</span>
+            </div>
+          </div>
+          <button onclick="openPaystackRecharge()" class="px-3.5 py-1.5 rounded-full bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase tracking-wide shadow-md">
+            Recharge
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 3. BOTTOM NAVIGATION BAR -->
+  <nav class="h-14 sm:h-16 bg-black border-t border-neutral-900 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2">
+    <button onclick="switchTab('live')" id="tabNavLive" class="flex flex-col items-center justify-center flex-1 text-[#ff0050]">
+      <i class="fa-solid fa-tower-broadcast text-lg"></i>
+      <span class="text-[10px] font-bold mt-0.5">LIVE</span>
+    </button>
+    <button onclick="switchTab('messages')" id="tabNavMessages" class="flex flex-col items-center justify-center flex-1 text-neutral-500 hover:text-white">
+      <i class="fa-solid fa-message text-lg"></i>
+      <span class="text-[10px] font-bold mt-0.5">Messages</span>
+    </button>
+    <button onclick="switchTab('profile')" id="tabNavProfile" class="flex flex-col items-center justify-center flex-1 text-neutral-500 hover:text-white">
+      <i class="fa-solid fa-user text-lg"></i>
+      <span class="text-[10px] font-bold mt-0.5">Profile</span>
+    </button>
+  </nav>
+
+  <script>
+    const SUPABASE_URL = 'https://hwiddexgiwtduuzprsjd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3aWRkZXhnaXd0ZHV1enByc2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDU1MjMsImV4cCI6MjEwODc4MTUyM30.QyzSo2eUtt0jBzW8_WRkIPutMj1wb5ex_9GgyOguwHI';
+    const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    let currentUser = null;
+    let isLive = false;
+    let streamDuration = 0;
+    let streamTimer = null;
+    let likes = 0;
+    let selectedSignupPhoto = null;
+
+    function initUser() {
+      const stored = localStorage.getItem('faceyou_session_user');
+      if (stored) {
+        currentUser = JSON.parse(stored);
+        document.getElementById('authOverlay').classList.add('hidden');
+        updateUI();
+      } else {
+        document.getElementById('authOverlay').classList.remove('hidden');
+      }
+    }
+
+    function setAuthTab(mode) {
+      if (mode === 'signup') {
+        document.getElementById('btnTabSignup').className = 'flex-1 py-2 text-xs font-black rounded-xl bg-neutral-800 text-white transition-all';
+        document.getElementById('btnTabLogin').className = 'flex-1 py-2 text-xs font-black rounded-xl text-neutral-400 hover:text-white transition-all';
+        document.getElementById('signupForm').classList.remove('hidden');
+        document.getElementById('loginForm').classList.add('hidden');
+      } else {
+        document.getElementById('btnTabLogin').className = 'flex-1 py-2 text-xs font-black rounded-xl bg-neutral-800 text-white transition-all';
+        document.getElementById('btnTabSignup').className = 'flex-1 py-2 text-xs font-black rounded-xl text-neutral-400 hover:text-white transition-all';
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('signupForm').classList.add('hidden');
+      }
+    }
+
+    // Handle user image upload during registration
+    function previewUserPhoto(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function() {
+        selectedSignupPhoto = reader.result;
+        const img = document.getElementById('photoPreviewImg');
+        img.src = reader.result;
+        img.classList.remove('hidden');
+        document.getElementById('photoPlaceholder').classList.add('hidden');
+        document.getElementById('photoStatusText').innerText = 'Photo selected successfully!';
+        document.getElementById('photoStatusText').className = 'text-[10px] text-emerald-400 font-bold mt-1';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Change profile photo from profile screen
+    function changeProfilePhoto(e) {
+      const file = e.target.files?.[0];
+      if (!file || !currentUser) return;
+      const reader = new FileReader();
+      reader.onload = function() {
+        currentUser.avatar = reader.result;
+        localStorage.setItem('faceyou_session_user', JSON.stringify(currentUser));
+        updateUI();
+        alert('Profile picture updated successfully!');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleAuthSubmit(e, mode) {
+      e.preventDefault();
+      if (mode === 'signup') {
+        const name = document.getElementById('regName').value.trim();
+        const handle = document.getElementById('regHandle').value.trim() || '@' + name.toLowerCase().replace(/\s+/g, '_');
+        const finalAvatar = selectedSignupPhoto || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=ff0050,00f2fe`;
+        currentUser = {
+          id: 'usr_' + Date.now(),
+          name,
+          handle: handle.startsWith('@') ? handle : '@' + handle,
+          email: document.getElementById('regEmail').value.trim(),
+          avatar: finalAvatar,
+          coins: 100
+        };
+      } else {
+        const email = document.getElementById('logEmail').value.trim();
+        currentUser = {
+          id: 'usr_' + Date.now(),
+          name: email.split('@')[0],
+          handle: '@' + email.split('@')[0],
+          email,
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(email)}&backgroundColor=ff0050,00f2fe`,
+          coins: 100
+        };
+      }
+      localStorage.setItem('faceyou_session_user', JSON.stringify(currentUser));
+      document.getElementById('authOverlay').classList.add('hidden');
+      updateUI();
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('faceyou_session_user');
+      currentUser = null;
+      document.getElementById('authOverlay').classList.remove('hidden');
+    }
+
+    function updateUI() {
+      if (!currentUser) return;
+      document.getElementById('stageHostName').innerText = currentUser.name;
+      document.getElementById('liveHostName').innerText = currentUser.name;
+      document.getElementById('profName').innerText = currentUser.name;
+      document.getElementById('profTopName').innerText = currentUser.name;
+      document.getElementById('profHandle').innerText = currentUser.handle;
+      document.getElementById('walletCoins').innerText = currentUser.coins.toLocaleString() + ' FaceYou Coins';
+      if (currentUser.avatar) {
+        document.getElementById('stageAvatar').src = currentUser.avatar;
+        document.getElementById('liveHostAvatar').src = currentUser.avatar;
+        document.getElementById('profAvatar').src = currentUser.avatar;
+      }
+    }
+
+    function switchTab(tab) {
+      ['pageLive', 'pageMessages', 'pageProfile'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['tabNavLive', 'tabNavMessages', 'tabNavProfile'].forEach(id => document.getElementById(id).className = 'flex flex-col items-center justify-center flex-1 text-neutral-500 hover:text-white');
+      if (tab === 'live') {
+        document.getElementById('pageLive').classList.remove('hidden');
+        document.getElementById('tabNavLive').className = 'flex flex-col items-center justify-center flex-1 text-[#ff0050] font-black';
+      } else if (tab === 'messages') {
+        document.getElementById('pageMessages').classList.remove('hidden');
+        document.getElementById('tabNavMessages').className = 'flex flex-col items-center justify-center flex-1 text-[#00f2fe] font-black';
+      } else if (tab === 'profile') {
+        document.getElementById('pageProfile').classList.remove('hidden');
+        document.getElementById('tabNavProfile').className = 'flex flex-col items-center justify-center flex-1 text-white font-black';
+      }
+    }
+
+    function handleScreenTap(e) {
+      if (e.target.closest('button') || e.target.closest('input')) return;
+      likes++;
+      const heart = document.createElement('div');
+      heart.className = 'absolute text-3xl select-none animate-float-heart drop-shadow-lg';
+      heart.style.left = e.clientX + 'px';
+      heart.style.top = e.clientY + 'px';
+      heart.innerText = ['❤️', '💖', '🔥', '✨'][Math.floor(Math.random() * 4)];
+      document.getElementById('heartsContainer').appendChild(heart);
+      setTimeout(() => heart.remove(), 2200);
+    }
+
+    async function toggleWebcam(e) {
+      if (e) e.stopPropagation();
+      const video = document.getElementById('liveWebcam');
+      const virtual = document.getElementById('virtualStage');
+      if (video.classList.contains('hidden')) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          video.srcObject = stream;
+          video.classList.remove('hidden');
+          virtual.classList.add('hidden');
+        } catch (err) { alert('Webcam permission not granted.'); }
+      } else {
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+        video.classList.add('hidden');
+        virtual.classList.remove('hidden');
+      }
+    }
+
+    // Toggle Broadcast (Includes stopping and turning off camera)
+    function toggleBroadcast(e) {
+      if (e) e.stopPropagation();
+      isLive = !isLive;
+      const btn = document.getElementById('btnBroadcast');
+      const topBtn = document.getElementById('btnTopEndLive');
+
+      if (isLive) {
+        btn.innerHTML = '<i class="fa-solid fa-square"></i> <span>End Live</span>';
+        btn.className = 'px-4 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xl';
+        
+        // Show prominent top End Live button
+        topBtn.classList.remove('hidden');
+        topBtn.classList.add('flex');
+
+        streamTimer = setInterval(() => {
+          streamDuration++;
+          document.getElementById('liveDuration').innerText = `• ${String(Math.floor(streamDuration/60)).padStart(2,'0')}:${String(streamDuration%60).padStart(2,'0')}`;
+        }, 1000);
+      } else {
+        // Stop stream and camera
+        clearInterval(streamTimer);
+        streamDuration = 0;
+        document.getElementById('liveDuration').innerText = '• 00:00';
+        
+        btn.innerHTML = '<i class="fa-solid fa-tower-broadcast text-xs"></i> <span>Go Live</span>';
+        btn.className = 'px-4 py-2 rounded-full bg-[#ff0050] hover:bg-[#e00047] text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xl';
+        
+        // Hide top End Live button
+        topBtn.classList.add('hidden');
+        topBtn.classList.remove('flex');
+
+        // Turn off webcam tracks
+        const video = document.getElementById('liveWebcam');
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(t => t.stop());
+        }
+        video.classList.add('hidden');
+        document.getElementById('virtualStage').classList.remove('hidden');
+
+        alert('Live stream ended! Great broadcast.');
+      }
+    }
+
+    function sendRoseGift(e) {
+      if (e) e.stopPropagation();
+      if (!currentUser || currentUser.coins < 1) { openPaystackRecharge(); return; }
+      currentUser.coins -= 1;
+      localStorage.setItem('faceyou_session_user', JSON.stringify(currentUser));
+      updateUI();
+      const chat = document.getElementById('chatMessages');
+      const msg = document.createElement('div');
+      msg.className = 'bg-gradient-to-r from-rose-950/80 to-black/70 border-l-2 border-[#ff0050] px-2.5 py-1 rounded-xl flex items-center gap-1.5 w-fit';
+      msg.innerHTML = `<span class="text-base">🌹</span><span class="text-xs font-bold text-white">${currentUser.name}</span><span class="text-[11px] text-rose-300 font-semibold">sent a Rose!</span>`;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function handleSendLiveChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('liveChatInput');
+      if (!input.value.trim()) return;
+      const chat = document.getElementById('chatMessages');
+      const msg = document.createElement('div');
+      msg.className = 'bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-xl w-fit max-w-[90%] text-xs border border-white/5';
+      msg.innerHTML = `<span class="font-extrabold text-[#00f2fe] mr-1.5">${currentUser.name}:</span><span class="font-medium text-white">${input.value.trim()}</span>`;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+      input.value = '';
+    }
+
+    function handleSendDM(e) {
+      e.preventDefault();
+      const input = document.getElementById('dmInput');
+      if (!input.value.trim()) return;
+      const stream = document.getElementById('dmStream');
+      const bubble = document.createElement('div');
+      bubble.className = 'bg-gradient-to-r from-rose-600 to-[#ff0050] text-white rounded-2xl rounded-tr-none p-3 max-w-[75%] ml-auto';
+      bubble.innerHTML = `<p class="text-xs font-medium">${input.value.trim()}</p>`;
+      stream.appendChild(bubble);
+      stream.scrollTop = stream.scrollHeight;
+      input.value = '';
+    }
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recSecs = 0;
+    let recTimer = null;
+
+    async function startVoiceNote() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.start();
+        recSecs = 0;
+        document.getElementById('recordingBar').classList.remove('hidden');
+        document.getElementById('textBar').classList.add('hidden');
+        recTimer = setInterval(() => { recSecs++; document.getElementById('recordTimer').innerText = `0:${String(recSecs).padStart(2,'0')}`; }, 1000);
+      } catch (err) { alert('Microphone permission required to record voice notes.'); }
+    }
+
+    function stopVoiceNote() {
+      if (recTimer) clearInterval(recTimer);
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const stream = document.getElementById('dmStream');
+          const bubble = document.createElement('div');
+          bubble.className = 'bg-neutral-800 text-white rounded-2xl p-3 max-w-[75%] ml-auto border border-cyan-500/30';
+          bubble.innerHTML = `
+            <div class="flex items-center gap-2">
+              <button onclick="new Audio('${url}').play()" class="w-8 h-8 rounded-full bg-[#ff0050] text-white flex items-center justify-center">
+                <i class="fa-solid fa-play text-xs ml-0.5"></i>
+              </button>
+              <div class="flex flex-col">
+                <span class="text-[11px] font-bold text-cyan-400">🎙️ Voice Note</span>
+                <span class="text-[10px] text-neutral-400">0:${String(recSecs).padStart(2,'0')}</span>
+              </div>
+            </div>`;
+          stream.appendChild(bubble);
+          stream.scrollTop = stream.scrollHeight;
+        };
+        mediaRecorder.stop();
+      }
+      document.getElementById('recordingBar').classList.add('hidden');
+      document.getElementById('textBar').classList.remove('hidden');
+    }
+
+    function openPaystackRecharge() {
+      if (typeof PaystackPop !== 'undefined') {
+        const handler = PaystackPop.setup({
+          key: 'pk_live_a9ad9d573bdf37b3d3162234fe832adb5fad3a28',
+          email: currentUser ? currentUser.email : 'user@faceyou.live',
+          amount: 1800 * 100,
+          currency: 'NGN',
+          callback: function() {
+            currentUser.coins += 380;
+            localStorage.setItem('faceyou_session_user', JSON.stringify(currentUser));
+            updateUI();
+            alert('🎉 Recharge successful! 380 FaceYou coins added.');
+          }
+        });
+        handler.openIframe();
+      }
+    }
+
+    function openGiftModal(e) {
+      if (e) e.stopPropagation();
+      sendRoseGift();
+    }
+
+    window.onload = initUser;
+  </script>
+</body>
+</html>

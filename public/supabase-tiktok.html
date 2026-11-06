@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok LIVE & Messaging (Supabase Edition)</title>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Supabase JS Client v2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Paystack Inline Popup -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <style>
+        :root {
+            --primary: #FE2C55;
+            --primary-hover: #e00047;
+            --cyan: #25F4EE;
+            --gold: #FACE15;
+            --bg: #000000;
+            --card: #121212;
+            --card-sub: #18181f;
+            --text: #ffffff;
+            --text-dim: #9ca3af;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Glitch text */
+        .tiktok-glitch {
+            text-shadow: -1.5px -1.5px 0 var(--cyan), 1.5px 1.5px 0 var(--primary);
+        }
+
+        /* Container */
+        .app-shell {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Screen views */
+        .screen-view {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        .screen-view.active {
+            display: flex;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            height: 56px;
+            background: #000000;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.65rem;
+            font-weight: 700;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+        .nav-item i { font-size: 1.15rem; }
+        .nav-item.active { color: #ffffff; }
+
+        .create-btn-wrapper {
+            position: relative;
+            width: 44px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .create-btn-cyan {
+            position: absolute;
+            left: -2px;
+            width: 16px;
+            height: 100%;
+            background: var(--cyan);
+            border-radius: 6px 0 0 6px;
+        }
+        .create-btn-red {
+            position: absolute;
+            right: -2px;
+            width: 16px;
+            height: 100%;
+            background: var(--primary);
+            border-radius: 0 6px 6px 0;
+        }
+        .create-btn-center {
+            position: relative;
+            z-index: 2;
+            width: 38px;
+            height: 100%;
+            background: #ffffff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000000;
+            font-size: 0.95rem;
+        }
+
+        /* Buttons & Forms */
+        .btn {
+            padding: 12px 20px;
+            border-radius: 30px;
+            border: none;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(254, 44, 85, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .input-box:focus { border-color: var(--primary); }
+
+        /* Floating Hearts */
+        .floating-heart {
+            position: absolute;
+            font-size: 2.2rem;
+            pointer-events: none;
+            animation: float-heart 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            user-select: none;
+        }
+        @keyframes float-heart {
+            0% { transform: translate(-50%, 0) scale(0.6) rotate(0deg); opacity: 0.9; }
+            50% { transform: translate(calc(-50% - 20px), -150px) scale(1.2) rotate(-10deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + 10px), -360px) scale(0.7) rotate(5deg); opacity: 0; }
+        }
+
+        /* Bottom Sheet */
+        .bottom-sheet {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .bottom-sheet.active { display: flex; }
+        .sheet-box {
+            width: 100%;
+            max-width: 480px;
+            background: #18181f;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px 24px 0 0;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <!-- SCREEN 0: SUPABASE AUTH GATEWAY (LOGIN / SIGN UP) -->
+        <div class="screen-view active" id="auth-screen">
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 4px;" class="tiktok-glitch">♪</div>
+                <h1 style="font-size: 2.2rem; font-weight: 900; margin-bottom: 6px;" class="tiktok-glitch">TikTok</h1>
+                <p style="font-size: 0.85rem; color: var(--text-dim); max-width: 300px; margin-bottom: 24px;">
+                    Enter your Supabase project credentials or register a new user to get started.
+                </p>
+
+                <!-- Auth Card -->
+                <div style="width: 100%; max-width: 360px; background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 24px;">
+                    <!-- Mode Switcher -->
+                    <div style="display: flex; background: #000; border-radius: 14px; padding: 4px; margin-bottom: 16px;">
+                        <button id="auth-tab-signup" class="btn" style="flex: 1; padding: 8px; font-size: 0.75rem; background: #222; border-radius: 10px;">Sign Up</button>
+                        <button id="auth-tab-login" class="btn" style="flex: 1; padding: 8px; font-size: 0.75rem; background: transparent; color: var(--text-dim);">Log In</button>
+                    </div>
+
+                    <div id="auth-error" style="display: none; padding: 10px; background: rgba(254,44,85,0.15); border: 1px solid rgba(254,44,85,0.3); border-radius: 10px; font-size: 0.75rem; color: #ff859d; margin-bottom: 12px;"></div>
+
+                    <form id="auth-form" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div id="name-group">
+                            <input type="text" id="auth-name" class="input-box" placeholder="Full Name" required>
+                        </div>
+                        <div id="handle-group">
+                            <input type="text" id="auth-handle" class="input-box" placeholder="Username (e.g. @dancequeen)">
+                        </div>
+                        <div>
+                            <input type="email" id="auth-email" class="input-box" placeholder="Email Address" required>
+                        </div>
+                        <div>
+                            <input type="password" id="auth-pass" class="input-box" placeholder="Password (min 6 characters)" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="margin-top: 8px;">
+                            <span>Create TikTok Account</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Supabase Config Toggle -->
+                <div style="margin-top: 16px; font-size: 0.75rem; color: var(--text-dim);">
+                    <span id="config-toggle-btn" style="cursor: pointer; text-decoration: underline;">Configure Supabase URL & Key</span>
+                </div>
+                <div id="config-box" style="display: none; width: 100%; max-width: 360px; margin-top: 12px; text-align: left; background: #0a0a0a; border: 1px solid #333; border-radius: 14px; padding: 14px;">
+                    <label style="font-size: 0.65rem; font-weight: 700; color: #aaa;">SUPABASE URL</label>
+                    <input type="text" id="cfg-url" class="input-box" placeholder="https://xyz.supabase.co" style="margin-bottom: 8px; font-size: 0.75rem;">
+                    <label style="font-size: 0.65rem; font-weight: 700; color: #aaa;">SUPABASE ANON KEY</label>
+                    <input type="text" id="cfg-key" class="input-box" placeholder="eyJhbGciOi..." style="font-size: 0.75rem;">
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 1: TIKTOK "FOR YOU" FEED -->
+        <div class="screen-view" id="foryou-screen">
+            <div style="position: absolute; top: 14px; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; z-index: 30;">
+                <div style="display: flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 900; font-size: 0.8rem; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 20px;">
+                    <i class="fas fa-broadcast-tower"></i> LIVE
+                </div>
+                <div style="display: flex; gap: 16px; font-weight: 800; font-size: 0.95rem;">
+                    <span style="opacity: 0.6;">Following</span>
+                    <span style="border-bottom: 2px solid white; padding-bottom: 2px;">For You</span>
+                </div>
+                <i class="fas fa-search" style="font-size: 1.1rem;"></i>
+            </div>
+
+            <!-- Video Reel Stage -->
+            <div id="video-reel" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; background: radial-gradient(circle at center, #300a18 0%, #000 80%); position: relative; cursor: pointer;">
+                <div style="flex: 1;"></div>
+                <!-- Right Action Stack -->
+                <div style="position: absolute; right: 16px; bottom: 80px; display: flex; flex-direction: column; align-items: center; gap: 16px; z-index: 20;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--primary); overflow: hidden;">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;" id="reel-like-btn">
+                        <i class="fas fa-heart" style="font-size: 1.8rem; color: #fff;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 800;" id="reel-like-count">142.8K</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <i class="fas fa-comment-dots" style="font-size: 1.8rem;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 800;">3.8K</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <i class="fas fa-bookmark" style="font-size: 1.8rem;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 800;">12.9K</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <i class="fas fa-share" style="font-size: 1.8rem;"></i>
+                        <span style="font-size: 0.75rem; font-weight: 800;">8.4K</span>
+                    </div>
+                </div>
+
+                <!-- Bottom Caption -->
+                <div style="z-index: 20; max-width: 75%;">
+                    <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 4px;" id="reel-author">@zara_beats</h3>
+                    <p style="font-size: 0.8rem; margin-bottom: 8px; line-height: 1.3;" id="reel-caption">When the music drops during LIVE set! 🎶🔥 #fyp #viral #afrobeats</p>
+                    <div style="font-size: 0.75rem; opacity: 0.85; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-music"></i>
+                        <span>♫ Burna Boy - Sungba Remix (Official Sound)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: TIKTOK LIVE BROADCAST & STREAM -->
+        <div class="screen-view" id="live-screen">
+            <div style="flex: 1; position: relative; background: #000; overflow: hidden;" id="live-viewport">
+                <!-- Video Element -->
+                <video id="live-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; transform: scaleX(-1);"></video>
+
+                <!-- Virtual Studio Stage fallback -->
+                <div id="live-fallback" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #240715 0%, #000 80%); text-align: center; padding: 20px;">
+                    <div style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; margin-bottom: 12px;">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800;" id="live-host-name">You</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; margin-bottom: 16px;">Turn on camera to broadcast to fans!</p>
+                    <button class="btn btn-secondary" id="cam-toggle-btn" style="font-size: 0.8rem;">
+                        <i class="fas fa-camera"></i> <span>Turn On Camera</span>
+                    </button>
+                </div>
+
+                <!-- Top LIVE Bar -->
+                <div style="position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; z-index: 30;">
+                    <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.6); padding: 4px 10px 4px 4px; border-radius: 20px;">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" style="width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--primary);">
+                        <span style="font-size: 0.75rem; font-weight: 800;" id="live-host-tag">You</span>
+                        <span style="font-size: 0.65rem; color: var(--primary); font-weight: 900;">LIVE</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800;">
+                            <i class="fas fa-eye" style="color: #aaa;"></i> <span id="live-viewers">0</span>
+                        </div>
+                        <button id="close-live-btn" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: none; color: white; cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Chat -->
+                <div style="position: absolute; bottom: 65px; left: 12px; width: 280px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; z-index: 30;" id="live-chat-box">
+                    <div style="background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem;">
+                        <span style="color: var(--cyan); font-weight: 800;">TikTok:</span> Welcome to LIVE! Tap screen to shower hearts.
+                    </div>
+                </div>
+
+                <!-- Bottom Action Controls -->
+                <div style="position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; z-index: 30;">
+                    <input type="text" id="live-chat-input" placeholder="Add comment..." style="flex: 1; padding: 8px 14px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; color: white; font-size: 0.8rem; outline: none;">
+                    <button id="quick-rose-btn" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(254,44,85,0.3); border: 1px solid var(--primary); color: white; font-size: 1.2rem; cursor: pointer;">🌹</button>
+                    <button id="open-gift-btn" style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--cyan)); border: none; color: var(--gold); font-size: 1.1rem; cursor: pointer;">🎁</button>
+                    <button class="btn btn-primary" id="go-live-toggle-btn" style="padding: 8px 16px; font-size: 0.75rem;">Go Live</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: INBOX & DIRECT VOICE NOTES -->
+        <div class="screen-view" id="inbox-screen">
+            <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 1.1rem; font-weight: 900;">Direct Messages</h2>
+                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" id="new-msg-btn">+ Chat</button>
+            </div>
+
+            <!-- Messages stream -->
+            <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;" id="dm-stream">
+                <div style="padding: 12px; background: #1a1a24; border-radius: 16px; max-width: 80%;">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--cyan); margin-bottom: 2px;">TikTok Creator Hub</div>
+                    <div style="font-size: 0.85rem;">Welcome! Tap the microphone icon below to record and send your first Voice Note! 🎙️</div>
+                </div>
+            </div>
+
+            <!-- Voice Note Recording Bar -->
+            <div style="padding: 10px 14px; background: #0f0f12; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;">
+                <input type="text" id="dm-text-input" class="input-box" placeholder="Type a message..." style="border-radius: 20px; padding: 10px 14px;">
+                <button id="mic-record-btn" style="width: 42px; height: 42px; border-radius: 50%; background: #222; border: 1px solid #444; color: var(--cyan); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button id="dm-send-btn" class="btn btn-primary" style="width: 42px; height: 42px; border-radius: 50%; padding: 0;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: USER PROFILE -->
+        <div class="screen-view" id="profile-screen">
+            <div style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+                <span id="prof-name-top" style="font-weight: 900; font-size: 0.95rem;">Profile</span>
+                <i class="fas fa-cog" style="cursor: pointer;" id="prof-settings-btn"></i>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px; text-align: center;">
+                <div style="width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; margin: 0 auto 10px;">
+                    <img id="prof-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <h2 id="prof-handle" style="font-size: 1.1rem; font-weight: 900; margin-bottom: 16px;">@user</h2>
+
+                <!-- 3 Columns -->
+                <div style="display: flex; justify-content: center; gap: 32px; margin-bottom: 20px;">
+                    <div><div style="font-weight: 900; font-size: 1.1rem;" id="prof-following">0</div><div style="font-size: 0.75rem; color: #888;">Following</div></div>
+                    <div><div style="font-weight: 900; font-size: 1.1rem;" id="prof-followers">0</div><div style="font-size: 0.75rem; color: #888;">Followers</div></div>
+                    <div><div style="font-weight: 900; font-size: 1.1rem;" id="prof-likes">0</div><div style="font-size: 0.75rem; color: #888;">Likes</div></div>
+                </div>
+
+                <!-- Wallet Card -->
+                <div style="background: var(--card-sub); border: 1px solid #333; border-radius: 18px; padding: 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="text-align: left;">
+                        <div style="font-size: 0.75rem; color: #aaa;">COIN BALANCE</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--gold);" id="prof-coins">100 Coins</div>
+                    </div>
+                    <button class="btn" style="background: var(--gold); color: #000; font-size: 0.75rem; padding: 6px 14px;" id="recharge-coins-btn">Recharge</button>
+                </div>
+
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;" id="logout-btn">Log Out</button>
+            </div>
+        </div>
+
+        <!-- 5-TAB TIKTOK BOTTOM NAV -->
+        <nav class="bottom-nav" id="app-bottom-nav">
+            <div class="nav-item active" data-tab="foryou">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </div>
+            <div class="nav-item" data-tab="live">
+                <i class="fas fa-broadcast-tower" style="color: var(--primary);"></i>
+                <span style="color: var(--primary);">LIVE</span>
+            </div>
+            <div class="nav-item" data-tab="live" style="flex: 1.2;">
+                <div class="create-btn-wrapper">
+                    <div class="create-btn-cyan"></div>
+                    <div class="create-btn-red"></div>
+                    <div class="create-btn-center"><i class="fas fa-plus"></i></div>
+                </div>
+            </div>
+            <div class="nav-item" data-tab="inbox">
+                <i class="fas fa-comment-dots"></i>
+                <span>Inbox</span>
+            </div>
+            <div class="nav-item" data-tab="profile">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- SUPABASE CLIENT & APPLICATION LOGIC -->
+    <script>
+        // Supabase Credentials (configure here or in UI)
+        let SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+        let SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+        let supabase = null;
+        if (window.supabase && SUPABASE_URL.indexOf("YOUR_PROJECT") === -1) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        let currentUser = null;
+        let isStreaming = false;
+        let streamMedia = null;
+        let authMode = 'signup';
+
+        // Elements
+        const authScreen = document.getElementById('auth-screen');
+        const foryouScreen = document.getElementById('foryou-screen');
+        const liveScreen = document.getElementById('live-screen');
+        const inboxScreen = document.getElementById('inbox-screen');
+        const profileScreen = document.getElementById('profile-screen');
+        const appNav = document.getElementById('app-bottom-nav');
+
+        // Check Local Storage Session
+        const storedUser = localStorage.getItem('supabase_tiktok_user');
+        if (storedUser) {
+            currentUser = JSON.parse(storedUser);
+            showApp();
+        }
+
+        // Auth Tabs
+        document.getElementById('auth-tab-signup').onclick = () => {
+            authMode = 'signup';
+            document.getElementById('name-group').style.display = 'block';
+            document.getElementById('handle-group').style.display = 'block';
+            document.getElementById('auth-submit-btn').innerHTML = '<span>Create TikTok Account</span> <i class="fas fa-arrow-right"></i>';
+            document.getElementById('auth-tab-signup').style.background = '#222';
+            document.getElementById('auth-tab-login').style.background = 'transparent';
+        };
+        document.getElementById('auth-tab-login').onclick = () => {
+            authMode = 'login';
+            document.getElementById('name-group').style.display = 'none';
+            document.getElementById('handle-group').style.display = 'none';
+            document.getElementById('auth-submit-btn').innerHTML = '<span>Log In</span> <i class="fas fa-arrow-right"></i>';
+            document.getElementById('auth-tab-login').style.background = '#222';
+            document.getElementById('auth-tab-signup').style.background = 'transparent';
+        };
+
+        // Auth Submit
+        document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            const name = document.getElementById('auth-name').value.trim();
+            const handle = document.getElementById('auth-handle').value.trim() || '@' + email.split('@')[0];
+
+            if (authMode === 'signup') {
+                currentUser = {
+                    id: 'usr_' + Date.now(),
+                    name: name || 'Creator',
+                    handle: handle.startsWith('@') ? handle : '@' + handle,
+                    email: email,
+                    coins: 100,
+                    followers: 0,
+                    following: 0,
+                    likes: 0
+                };
+            } else {
+                currentUser = {
+                    id: 'usr_' + Date.now(),
+                    name: email.split('@')[0],
+                    handle: '@' + email.split('@')[0],
+                    email: email,
+                    coins: 100,
+                    followers: 0,
+                    following: 0,
+                    likes: 0
+                };
+            }
+
+            localStorage.setItem('supabase_tiktok_user', JSON.stringify(currentUser));
+            showApp();
+        };
+
+        function showApp() {
+            authScreen.classList.remove('active');
+            foryouScreen.classList.add('active');
+            updateProfileUI();
+        }
+
+        function updateProfileUI() {
+            if (!currentUser) return;
+            document.getElementById('prof-handle').textContent = currentUser.handle;
+            document.getElementById('prof-name-top').textContent = currentUser.name;
+            document.getElementById('prof-coins').textContent = currentUser.coins + ' Coins';
+            document.getElementById('live-host-name').textContent = currentUser.name;
+            document.getElementById('live-host-tag').textContent = currentUser.handle;
+        }
+
+        // Navigation Switcher
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.onclick = () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+
+                const target = item.getAttribute('data-tab');
+                [foryouScreen, liveScreen, inboxScreen, profileScreen].forEach(s => s.classList.remove('active'));
+
+                if (target === 'foryou') foryouScreen.classList.add('active');
+                if (target === 'live') liveScreen.classList.add('active');
+                if (target === 'inbox') inboxScreen.classList.add('active');
+                if (target === 'profile') profileScreen.classList.add('active');
+            };
+        });
+
+        // Logout
+        document.getElementById('logout-btn').onclick = () => {
+            localStorage.removeItem('supabase_tiktok_user');
+            currentUser = null;
+            location.reload();
+        };
+
+        // Live Camera
+        document.getElementById('cam-toggle-btn').onclick = async () => {
+            try {
+                streamMedia = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('live-video').srcObject = streamMedia;
+                document.getElementById('live-fallback').style.display = 'none';
+            } catch (err) {
+                alert('Could not access camera in this browser view. Virtual stage active!');
+            }
+        };
+
+        // Quick Rose
+        document.getElementById('quick-rose-btn').onclick = () => {
+            if (currentUser.coins < 1) {
+                alert('Not enough coins! Please recharge.');
+                return;
+            }
+            currentUser.coins -= 1;
+            document.getElementById('prof-coins').textContent = currentUser.coins + ' Coins';
+            
+            const chatBox = document.getElementById('live-chat-box');
+            const d = document.createElement('div');
+            d.style.cssText = 'background: rgba(254,44,85,0.2); border-left: 2px solid var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem;';
+            d.innerHTML = `<strong>${currentUser.name}</strong> sent 🌹 Rose!`;
+            chatBox.appendChild(d);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+        // Voice Note Recorder (MediaRecorder)
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        const micBtn = document.getElementById('mic-record-btn');
+
+        micBtn.onclick = async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.start();
+                    isRecording = true;
+                    micBtn.style.color = '#FE2C55';
+                    micBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                } catch {
+                    alert('Microphone access blocked or unavailable.');
+                }
+            } else {
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const url = URL.createObjectURL(blob);
+                    addVoiceNoteBubble(url);
+                };
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.style.color = 'var(--cyan)';
+                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+            }
+        };
+
+        function addVoiceNoteBubble(url) {
+            const stream = document.getElementById('dm-stream');
+            const b = document.createElement('div');
+            b.style.cssText = 'padding: 10px 14px; background: var(--primary); border-radius: 16px; align-self: flex-end; color: white; display: flex; align-items: center; gap: 10px;';
+            b.innerHTML = `
+                <i class="fas fa-play" style="cursor: pointer;" onclick="new Audio('${url}').play()"></i>
+                <span style="font-size: 0.8rem; font-weight: 800;">🎙️ Voice Note</span>
+            `;
+            stream.appendChild(b);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        // Close Live
+        document.getElementById('close-live-btn').onclick = () => {
+            document.querySelector('.nav-item[data-tab="foryou"]').click();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceYou - Live Streaming</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #ff0050;
+            --secondary: #000000;
+            --accent: #00f2fe;
+            --dark: #000000;
+            --light: #ffffff;
+            --gray: #8e8e90;
+            --success: #00c853;
+            --warning: #ffab00;
+            --danger: #ff4458;
+            --coin: #ffab00;
+            --gift: #ff0050;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--secondary);
+            color: var(--light);
+            overflow-x: hidden;
+        }
+        
+        /* TikTok-like layout */
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--dark);
+        }
+        
+        /* Header */
+        .app-header {
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        
+        .logo i {
+            font-size: 1.8rem;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--light);
+            font-size: 1.2rem;
+            cursor: pointer;
+            position: relative;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+        
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            margin-top: 60px;
+            overflow: hidden;
+        }
+        
+        /* Video Section */
+        .video-section {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            max-width: 600px;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+        
+        .stream-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+        }
+        
+        .streamer-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .live-badge {
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .viewers-count {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Side Panel */
+        .side-panel {
+            width: 350px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+        }
+        
+        .tab.active {
+            color: var(--primary);
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary);
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Chat Section */
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        
+        .message.self {
+            margin-left: auto;
+            background: var(--primary);
+        }
+        
+        .message.system {
+            background: rgba(255, 171, 0, 0.2);
+            text-align: center;
+            margin: 0 auto;
+            max-width: 90%;
+        }
+        
+        .message.gift {
+            background: rgba(255, 0, 80, 0.2);
+            border-left: 3px solid var(--gift);
+        }
+        
+        .message-header {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            opacity: 0.8;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+        
+        .chat-input input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Gifts Section */
+        .gifts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .gift-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        
+        .gift-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .gift-card.selected {
+            border-color: var(--gift);
+            background: rgba(255, 0, 80, 0.1);
+        }
+        
+        .gift-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--gift);
+        }
+        
+        .gift-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .gift-cost {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            color: var(--coin);
+            font-weight: 600;
+        }
+        
+        /* Notifications */
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .notification-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .notification-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        
+        .notification-time {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+        
+        /* Profile Section */
+        .profile-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 3rem;
+            font-weight: bold;
+            border: 3px solid var(--primary);
+        }
+        
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .profile-bio {
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .profile-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        /* Coin Balance */
+        .coin-balance {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .coin-balance i {
+            color: var(--coin);
+            font-size: 1.2rem;
+        }
+        
+        /* Stream Controls */
+        .stream-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .control-btn.primary {
+            background: var(--primary);
+        }
+        
+        /* Auth Modal */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .auth-modal-content {
+            background: var(--dark);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .auth-tab.active {
+            color: var(--primary);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Payment Modal */
+        .payment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .payment-modal-content {
+            background: var(--dark);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .payment-packages {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .package {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .package:hover {
+            border-color: var(--primary);
+        }
+        
+        .package.selected {
+            border-color: var(--primary);
+            background: rgba(255, 0, 80, 0.1);
+        }
+        
+        .package-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .package-coins {
+            font-weight: 700;
+            color: var(--coin);
+        }
+        
+        .package-price {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .package-bonus {
+            font-size: 0.8rem;
+            color: var(--success);
+            margin-top: 5px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .side-panel {
+                width: 100%;
+                position: absolute;
+                bottom: 0;
+                top: auto;
+                height: 50%;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                z-index: 100;
+            }
+            
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .video-section {
+                height: 70%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <span>FaceYou</span>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="coin-btn">
+                    <i class="fas fa-coins"></i>
+                    <span class="notification-badge" id="coin-badge">0</span>
+                </button>
+                <button class="icon-btn" id="notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notification-badge">3</span>
+                </button>
+                <button class="icon-btn" id="profile-btn">
+                    <i class="fas fa-user"></i>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="video-container">
+                    <video id="local-video" autoplay muted></video>
+                    
+                    <div class="stream-info">
+                        <div class="streamer-name">
+                            <span id="streamer-name">You</span>
+                            <div class="live-badge">
+                                <span class="live-dot"></span>
+                                <span>LIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="viewers-count">
+                        <i class="fas fa-users"></i>
+                        <span id="viewers-count">0 viewers</span>
+                    </div>
+                    
+                    <div class="coin-balance">
+                        <i class="fas fa-coins"></i>
+                        <span id="coin-balance">100</span>
+                    </div>
+                    
+                    <div class="stream-controls">
+                        <button class="control-btn" id="start-camera">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <button class="control-btn primary" id="go-live">
+                            <i class="fas fa-broadcast-tower"></i>
+                        </button>
+                        <button class="control-btn" id="stop-stream">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Side Panel -->
+            <div class="side-panel">
+                <div class="panel-tabs">
+                    <div class="tab active" data-tab="chat">Chat</div>
+                    <div class="tab" data-tab="gifts">Gifts</div>
+                    <div class="tab" data-tab="notifications">Notifications</div>
+                    <div class="tab" data-tab="profile">Profile</div>
+                </div>
+                
+                <!-- Chat Tab -->
+                <div class="tab-content active" id="chat-tab">
+                    <div class="chat-container" id="chat-container">
+                        <div class="message system">
+                            Welcome to FaceYou! Start your stream to begin chatting.
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input">
+                        <input type="text" id="message-input" placeholder="Type a message..." disabled>
+                        <button class="btn btn-primary" id="send-btn" disabled>Send</button>
+                    </div>
+                </div>
+                
+                <!-- Gifts Tab -->
+                <div class="tab-content" id="gifts-tab">
+                    <div class="gifts-grid">
+                        <div class="gift-card" data-gift="heart" data-cost="10">
+                            <div class="gift-icon"><i class="fas fa-heart"></i></div>
+                            <div class="gift-name">Heart</div>
+                            <div class="gift-cost"><i class="fas fa-coins"></i> 10</div>
+                        </div>
+                        <div class="gift-card" data-gift="star" data-cost="20">
+                            <div class="gift-icon"><i class="fas fa-star"></i></div>
+                            <div class="gift-name">Star</div>
+                            <div class="gift-cost"><i class="fas fa-coins"></i> 20</div>
+                        </div>
+                        <div class="gift-card" data-gift="gift" data-cost="30">
+                            <div class="gift-icon"><i class="fas fa-gift"></i></div>
+                            <div class="gift-name">Gift</div>
+                            <div class="gift-cost"><i class="fas fa-coins"></i> 30</div>
+                        </div>
+                        <div class="gift-card" data-gift="rocket" data-cost="50">
+                            <div class="gift-icon"><i class="fas fa-rocket"></i></div>
+                            <div class="gift-name">Rocket</div>
+                            <div class="gift-cost"><i class="fas fa-coins"></i> 50</div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary btn-block" id="buy-coins">
+                        <i class="fas fa-shopping-cart"></i> Buy Coins
+                    </button>
+                </div>
+                
+                <!-- Notifications Tab -->
+                <div class="tab-content" id="notifications-tab">
+                    <div class="notification-item">
+                        <div class="notification-avatar">A</div>
+                        <div class="notification-content">
+                            <div class="notification-title">Alice started following you</div>
+                            <div class="notification-time">2 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <div class="notification-avatar">B</div>
+                        <div class="notification-content">
+                            <div class="notification-title">Bob sent you a message</div>
+                            <div class="notification-time">5 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <div class="notification-avatar">C</div>
+                        <div class="notification-content">
+                            <div class="notification-title">Charlie sent you a Heart gift</div>
+                            <div class="notification-time">10 minutes ago</div>
+                        </div>
+                    </div>
+                    <div class="notification-item">
+                        <div class="notification-avatar">D</div>
+                        <div class="notification-content">
+                            <div class="notification-title">Diana joined your stream</div>
+                            <div class="notification-time">15 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Tab -->
+                <div class="tab-content" id="profile-tab">
+                    <div class="profile-header">
+                        <div class="profile-avatar">U</div>
+                        <div class="profile-name" id="profile-name">User Name</div>
+                        <div class="profile-bio">Streaming enthusiast & content creator</div>
+                        
+                        <div class="profile-stats">
+                            <div class="stat">
+                                <div class="stat-value" id="followers-count">0</div>
+                                <div class="stat-label">Followers</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="following-count">0</div>
+                                <div class="stat-label">Following</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="likes-count">0</div>
+                                <div class="stat-label">Likes</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-actions">
+                            <button class="btn btn-secondary" id="edit-profile">Edit Profile</button>
+                            <button class="btn btn-primary" id="share-profile">Share</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="signup">Sign Up</div>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form active" id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email or Username</label>
+                    <input type="text" id="login-email" placeholder="Enter your email or username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password">
+                </div>
+                <button class="btn btn-primary btn-block" id="login-btn">Login</button>
+                <div class="form-group" style="text-align: center; margin-top: 15px;">
+                    <a href="#" style="color: var(--gray); font-size: 0.9rem;">Forgot password?</a>
+                </div>
+            </div>
+            
+            <!-- Signup Form -->
+            <div class="auth-form" id="signup-form">
+                <div class="form-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm">Confirm Password</label>
+                    <input type="password" id="signup-confirm" placeholder="Confirm your password">
+                </div>
+                <button class="btn btn-primary btn-block" id="signup-btn">Sign Up</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div class="payment-modal" id="payment-modal">
+        <div class="payment-modal-content">
+            <h2 style="margin-bottom: 20px; text-align: center;">Buy Coins</h2>
+            <p style="text-align: center; margin-bottom: 20px; color: var(--gray);">Select a package to purchase coins for sending gifts</p>
+            
+            <div class="payment-packages">
+                <div class="package" data-coins="100" data-price="500">
+                    <div class="package-header">
+                        <div class="package-coins">100 Coins</div>
+                        <div class="package-price">₦500</div>
+                    </div>
+                    <div class="package-bonus">Basic Pack</div>
+                </div>
+                <div class="package selected" data-coins="500" data-price="2000">
+                    <div class="package-header">
+                        <div class="package-coins">500 Coins</div>
+                        <div class="package-price">₦2,000</div>
+                    </div>
+                    <div class="package-bonus">Popular Pack - Save 20%</div>
+                </div>
+                <div class="package" data-coins="1200" data-price="4000">
+                    <div class="package-header">
+                        <div class="package-coins">1200 Coins</div>
+                        <div class="package-price">₦4,000</div>
+                    </div>
+                    <div class="package-bonus">Value Pack - Save 30%</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary btn-block" id="paystack-btn">
+                <i class="fas fa-credit-card"></i> Pay with Paystack
+            </button>
+            <button class="btn btn-secondary btn-block" id="close-payment" style="margin-top: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Paystack Public Key
+        const PAYSTACK_PUBLIC_KEY = "pk_live_a9ad9d573bdf37b3d3162234fe832adb5fad3a28";
+        
+        // DOM Elements
+        const authModal = document.getElementById('auth-modal');
+        const paymentModal = document.getElementById('payment-modal');
+        const loginTab = document.querySelector('.auth-tab[data-tab="login"]');
+        const signupTab = document.querySelector('.auth-tab[data-tab="signup"]');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const coinBalance = document.getElementById('coin-balance');
+        const coinBtn = document.getElementById('coin-btn');
+        const notificationBtn = document.getElementById('notification-btn');
+        const profileBtn = document.getElementById('profile-btn');
+        const buyCoinsBtn = document.getElementById('buy-coins');
+        const paystackBtn = document.getElementById('paystack-btn');
+        const closePaymentBtn = document.getElementById('close-payment');
+        const startCameraBtn = document.getElementById('start-camera');
+        const goLiveBtn = document.getElementById('go-live');
+        const stopStreamBtn = document.getElementById('stop-stream');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const chatContainer = document.getElementById('chat-container');
+        const giftCards = document.querySelectorAll('.gift-card');
+        
+        // State variables
+        let userCoins = 100;
+        let isStreaming = false;
+        let isCameraOn = false;
+        let selectedPackage = null;
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in (simulate with localStorage)
+            const currentUser = localStorage.getItem('faceyou_user');
+            if (!currentUser) {
+                // Show auth modal for new users
+                authModal.style.display = 'flex';
+            } else {
+                // User is logged in, update UI
+                const user = JSON.parse(currentUser);
+                document.getElementById('profile-name').textContent = user.name;
+                userCoins = user.coins || 100;
+                coinBalance.textContent = userCoins;
+            }
+            
+            setupEventListeners();
+        });
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Auth tabs
+            loginTab.addEventListener('click', () => {
+                switchAuthTab('login');
+            });
+            
+            signupTab.addEventListener('click', () => {
+                switchAuthTab('signup');
+            });
+            
+            // Auth buttons
+            loginBtn.addEventListener('click', handleLogin);
+            signupBtn.addEventListener('click', handleSignup);
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.getAttribute('data-tab');
+                    switchTab(tabName);
+                });
+            });
+            
+            // Header buttons
+            coinBtn.addEventListener('click', () => {
+                paymentModal.style.display = 'flex';
+            });
+            
+            notificationBtn.addEventListener('click', () => {
+                switchTab('notifications');
+            });
+            
+            profileBtn.addEventListener('click', () => {
+                switchTab('profile');
+            });
+            
+            // Payment
+            buyCoinsBtn.addEventListener('click', () => {
+                paymentModal.style.display = 'flex';
+            });
+            
+            paystackBtn.addEventListener('click', handlePaystackPayment);
+            closePaymentBtn.addEventListener('click', () => {
+                paymentModal.style.display = 'none';
+            });
+            
+            // Stream controls
+            startCameraBtn.addEventListener('click', startCamera);
+            goLiveBtn.addEventListener('click', toggleStream);
+            stopStreamBtn.addEventListener('click', stopStream);
+            
+            // Chat
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Gifts
+            giftCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    giftCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    
+                    const giftType = card.getAttribute('data-gift');
+                    const cost = parseInt(card.getAttribute('data-cost'));
+                    sendGift(giftType, cost);
+                });
+            });
+            
+            // Package selection
+            const packages = document.querySelectorAll('.package');
+            packages.forEach(pkg => {
+                pkg.addEventListener('click', () => {
+                    packages.forEach(p => p.classList.remove('selected'));
+                    pkg.classList.add('selected');
+                    selectedPackage = {
+                        coins: parseInt(pkg.getAttribute('data-coins')),
+                        price: parseInt(pkg.getAttribute('data-price'))
+                    };
+                });
+            });
+        }
+        
+        // Auth functions
+        function switchAuthTab(tab) {
+            // Update tab active state
+            document.querySelectorAll('.auth-tab').forEach(t => {
+                t.classList.remove('active');
+            });
+            document.querySelector(`.auth-tab[data-tab="${tab}"]`).classList.add('active');
+            
+            // Show corresponding form
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            document.getElementById(`${tab}-form`).classList.add('active');
+        }
+        
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Simulate login (in a real app, this would be an API call)
+            const user = {
+                name: email.split('@')[0], // Simple username from email
+                email: email,
+                coins: userCoins
+            };
+            
+            localStorage.setItem('faceyou_user', JSON.stringify(user));
+            authModal.style.display = 'none';
+            
+            // Update UI
+            document.getElementById('profile-name').textContent = user.name;
+            coinBalance.textContent = user.coins;
+            
+            addSystemMessage(`Welcome back, ${user.name}!`);
+        }
+        
+        function handleSignup() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
+            
+            if (!name || !email || !password || !confirm) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            if (password !== confirm) {
+                alert('Passwords do not match');
+                return;
+            }
+            
+            // Simulate signup (in a real app, this would be an API call)
+            const user = {
+                name: name,
+                email: email,
+                coins: userCoins
+            };
+            
+            localStorage.setItem('faceyou_user', JSON.stringify(user));
+            authModal.style.display = 'none';
+            
+            // Update UI
+            document.getElementById('profile-name').textContent = user.name;
+            coinBalance.textContent = user.coins;
+            
+            addSystemMessage(`Welcome to FaceYou, ${user.name}!`);
+        }
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab active state
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Show corresponding content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+        
+        // Payment functions
+        function handlePaystackPayment() {
+            if (!selectedPackage) {
+                alert('Please select a package');
+                return;
+            }
+            
+            // In a real app, you would initialize Paystack here
+            // For this demo, we'll simulate the payment
+            
+            const handler = PaystackCheckoutSetup({
+                key: PAYSTACK_PUBLIC_KEY,
+                email: 'user@example.com', // In a real app, get from user
+                amount: selectedPackage.price * 100, // Paystack uses kobo (1/100 of naira)
+                currency: 'NGN',
+                label: `FaceYou - ${selectedPackage.coins} Coins`,
+                
+                callback: function(response) {
+                    // Payment successful
+                    userCoins += selectedPackage.coins;
+                    coinBalance.textContent = userCoins;
+                    
+                    // Update user in localStorage
+                    const currentUser = JSON.parse(localStorage.getItem('faceyou_user'));
+                    currentUser.coins = userCoins;
+                    localStorage.setItem('faceyou_user', JSON.stringify(currentUser));
+                    
+                    addSystemMessage(`Payment successful! You received ${selectedPackage.coins} coins.`);
+                    paymentModal.style.display = 'none';
+                },
+                
+                onClose: function() {
+                    // Payment modal closed
+                    addSystemMessage('Payment cancelled.');
+                }
+            });
+            
+            // For demo purposes, we'll simulate the payment
+            // In a real app, you would call handler.setupIframe()
+            alert(`Simulating Paystack payment for ${selectedPackage.coins} coins (₦${selectedPackage.price})`);
+            
+            // Simulate successful payment after 2 seconds
+            setTimeout(() => {
+                userCoins += selectedPackage.coins;
+                coinBalance.textContent = userCoins;
+                
+                // Update user in localStorage
+                const currentUser = JSON.parse(localStorage.getItem('faceyou_user'));
+                currentUser.coins = userCoins;
+                localStorage.setItem('faceyou_user', JSON.stringify(currentUser));
+                
+                addSystemMessage(`Payment successful! You received ${selectedPackage.coins} coins.`);
+                paymentModal.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Stream functions
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                document.getElementById('local-video').srcObject = stream;
+                isCameraOn = true;
+                startCameraBtn.innerHTML = '<i class="fas fa-camera-slash"></i>';
+                goLiveBtn.disabled = false;
+                
+                addSystemMessage("Camera started successfully!");
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                addSystemMessage("Could not access camera/microphone. Please check permissions.");
+            }
+        }
+        
+        function toggleStream() {
+            if (!isStreaming) {
+                // Start streaming
+                isStreaming = true;
+                goLiveBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                goLiveBtn.classList.add('primary');
+                goLiveBtn.classList.remove('btn-primary');
+                
+                // Enable chat
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.placeholder = "Type a message...";
+                
+                addSystemMessage("You are now LIVE! 🎥");
+                
+                // Simulate viewers joining
+                setTimeout(() => {
+                    document.getElementById('viewers-count').textContent = "5 viewers";
+                }, 3000);
+            } else {
+                // Stop streaming
+                stopStream();
+            }
+        }
+        
+        function stopStream() {
+            isStreaming = false;
+            goLiveBtn.innerHTML = '<i class="fas fa-broadcast-tower"></i>';
+            goLiveBtn.classList.remove('primary');
+            goLiveBtn.classList.add('btn-primary');
+            
+            // Disable chat
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+            messageInput.placeholder = "Start streaming to chat";
+            
+            document.getElementById('viewers-count').textContent = "0 viewers";
+            
+            addSystemMessage("Stream ended.");
+        }
+        
+        // Chat functions
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            
+            // Add message to chat
+            addMessage(text, true);
+            messageInput.value = '';
+            
+            // Simulate viewer response
+            if (isStreaming) {
+                setTimeout(() => {
+                    const viewerNames = ['Fan123', 'ViewerOne', 'ChatKing', 'StreamFan', 'WebUser'];
+                    const randomName = viewerNames[Math.floor(Math.random() * viewerNames.length)];
+                    const viewerMessages = [
+                        'Great stream!',
+                        'Hello everyone!',
+                        'How are you today?',
+                        'Loving the content!',
+                        'Thanks for streaming!'
+                    ];
+                    const randomMessage = viewerMessages[Math.floor(Math.random() * viewerMessages.length)];
+                    
+                    addMessage(randomMessage, false, randomName);
+                }, 2000);
+            }
+        }
+        
+        function addMessage(text, isSelf = false, sender = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            if (isSelf) {
+                messageDiv.classList.add('self');
+            }
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            
+            if (isSelf) {
+                headerDiv.textContent = 'You';
+            } else {
+                headerDiv.textContent = sender || 'Anonymous';
+            }
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = text;
+            
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(textDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function addSystemMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = text;
+            
+            messageDiv.appendChild(textDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Gift functions
+        function sendGift(giftType, cost) {
+            if (userCoins < cost) {
+                addSystemMessage("You don't have enough coins to send this gift.");
+                return;
+            }
+            
+            // Deduct coins
+            userCoins -= cost;
+            coinBalance.textContent = userCoins;
+            
+            // Update user in localStorage
+            const currentUser = JSON.parse(localStorage.getItem('faceyou_user'));
+            currentUser.coins = userCoins;
+            localStorage.setItem('faceyou_user', JSON.stringify(currentUser));
+            
+            // Add gift message to chat
+            const giftNames = {
+                'heart': 'Heart',
+                'star': 'Star',
+                'gift': 'Gift',
+                'rocket': 'Rocket'
+            };
+            
+            addGiftMessage(`You sent a ${giftNames[giftType]}!`, cost, true);
+            
+            // Show gift animation
+            showGiftAnimation(giftType);
+            
+            // Simulate viewer receiving gift
+            if (isStreaming) {
+                setTimeout(() => {
+                    const viewerNames = ['Fan123', 'ViewerOne', 'ChatKing', 'StreamFan', 'WebUser'];
+                    const randomName = viewerNames[Math.floor(Math.random() * viewerNames.length)];
+                    
+                    addGiftMessage(`${randomName} sent you a ${giftNames[giftType]}!`, cost, false, randomName);
+                }, 1000);
+            }
+        }
+        
+        function addGiftMessage(text, cost, isSelf = false, sender = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message gift';
+            
+            if (isSelf) {
+                messageDiv.classList.add('self');
+            }
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            
+            if (isSelf) {
+                headerDiv.textContent = 'You';
+            } else {
+                headerDiv.textContent = sender || 'Anonymous';
+            }
+            
+            // Add coin cost indicator
+            const costSpan = document.createElement('span');
+            costSpan.style.marginLeft = '10px';
+            costSpan.style.color = 'var(--coin)';
+            costSpan.innerHTML = `<i class="fas fa-coins"></i> ${cost}`;
+            headerDiv.appendChild(costSpan);
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.textContent = text;
+            
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(textDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showGiftAnimation(giftType) {
+            // Create animation element
+            const animation = document.createElement('div');
+            animation.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 4rem;
+                color: var(--gift);
+                z-index: 2000;
+                animation: floatUp 3s forwards;
+                pointer-events: none;
+            `;
+            
+            // Set icon based on gift type
+            const icons = {
+                'heart': 'fas fa-heart',
+                'star': 'fas fa-star',
+                'gift': 'fas fa-gift',
+                'rocket': 'fas fa-rocket'
+            };
+            
+            animation.innerHTML = `<i class="${icons[giftType]}"></i>`;
+            document.body.appendChild(animation);
+            
+            // Remove animation after it completes
+            setTimeout(() => {
+                document.body.removeChild(animation);
+            }, 3000);
+        }
+        
+        // Add CSS for gift animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes floatUp {
+                0% {
+                    transform: translate(-50%, -50%) scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(-50%, -200px) scale(0);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
